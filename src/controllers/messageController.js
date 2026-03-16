@@ -15,3 +15,21 @@ exports.getMessages = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.sendMediaMessage = async (req,res)=>{
+  try{
+
+    const { chatId } = req.body;
+
+    const message = await Message.create({
+      chatId,
+      sender: req.userId,
+      media: req.file.path
+    });
+
+    res.json(message)
+
+  }catch(err){
+    res.status(500).json({message:err.message})
+  }
+}

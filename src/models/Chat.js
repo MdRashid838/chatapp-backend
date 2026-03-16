@@ -5,22 +5,27 @@ const chatSchema = new mongoose.Schema(
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-      }
+        ref: "User",
+      },
     ],
 
     isGroup: {
       type: Boolean,
-      default: false
+      default: false,
+    },
+    groupName: String,
+
+    groupAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
 
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Message"
-    }
-
+      ref: "Message",
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Chat", chatSchema);
