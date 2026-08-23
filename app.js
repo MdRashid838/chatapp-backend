@@ -27,11 +27,47 @@ app.use(express.json());
 const server = http.createServer(app);
 
 // Create Socket.IO server
+// const io = new Server(server, {
+//   cors: {
+//     origin: "*",
+//     methods: ["GET", "POST"],
+//   },
+// });
+
+// Allowed Origins List
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://chatapp-frontend-i8pc.onrender.com",
+];
+
+// 1. Express CORS
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true); // production safety
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  })
+);
+
+app.use(express.json());
+
+// const server = http.createServer(app);
+
+// 2. Socket.IO CORS
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   },
+  transports: ["polling", "websocket"],
 });
 
 // Redis Adapter
