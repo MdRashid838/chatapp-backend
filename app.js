@@ -27,15 +27,11 @@ app.use(express.json());
 const server = http.createServer(app);
 
 // Create Socket.IO server
-// server.js
 const io = new Server(server, {
   cors: {
-    origin: "*", 
-    // Ya apna specific frontend render URL: "https://your-frontend.onrender.com"
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
   },
-  transports: ["polling", "websocket"],
 });
 
 // Redis Adapter
