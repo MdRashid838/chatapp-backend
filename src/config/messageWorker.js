@@ -48,18 +48,15 @@ const worker = new Worker(
 
   {
     connection: {
-      host: "localhost",
-      port: 6379,
+      url: process.env.REDIS_URL,
     },
   }
 );
-
 
 // Job completed
 worker.on("completed", (job) => {
   console.log("✅ Job completed:", job.id);
 });
-
 
 // Job failed
 worker.on("failed", (job, error) => {
@@ -70,12 +67,10 @@ worker.on("failed", (job, error) => {
   );
 });
 
-
 // Worker error
 worker.on("error", (error) => {
   console.error("❌ Worker error:", error);
 });
-
 
 // MongoDB connection
 mongoose
