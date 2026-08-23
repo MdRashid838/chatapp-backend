@@ -5,32 +5,43 @@ const messageSchema = new mongoose.Schema(
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",
-      required: true
+      required: true,
     },
 
     sender: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
 
     text: {
-      type: String
+      type: String,
     },
 
     mediaUrl: {
-      type: String
+      type: String,
     },
 
     seenBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-      }
-    ]
+        ref: "User",
+      },
+    ],
+    status: {
+      type: String,
+      enum: ["sent", "delivered", "seen"],
+      default: "sent",
+    },
 
+    deliveredTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Message", messageSchema);

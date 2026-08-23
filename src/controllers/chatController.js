@@ -1,6 +1,46 @@
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
 
+// backend/src/controllers/chatController.js
+const User = require("../models/User");
+
+exports.getChatUsers = async (req, res) => {
+  try {
+    const currentUserId = req.userId;
+
+    // Current user ke followers aur following list fetch karo
+    const currentUser = await User.findById(currentUserId)
+      .populate("followers", "_id name username avatar")
+      .populate("following", "_id name username avatar");
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Followers aur Following ko combine karke duplicate IDs remove karo
+    const allConnected = [...(currentUser.followers || []), ...(currentUser.following || [])];
+    const uniqueUserMap = new Map();
+
+    allConnected.forEach((u) => {
+      if (u && u._id && u._id.toString() !== currentUserId.toString()) {
+        uniqueUserMap.set(u._id.toString(), {
+          _id: u._id,
+          name: u.name,
+          username: u.username,
+          avatar: u.avatar || "",
+        });
+      }
+    });
+
+    const userList = Array.from(uniqueUserMap.values());
+
+    res.status(200).json(userList);
+  } catch (error) {
+    console.error("Fetch chat users error:", error);
+    res.status(500).json({ message: "Failed to load chat users", error: error.message });
+  }
+};
+
 exports.sendMessage = async (req, res) => {
   try {
 
