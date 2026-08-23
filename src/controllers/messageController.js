@@ -1,108 +1,109 @@
 const Message = require("../models/Message");
-const messageQueue = require("../queue/messageQueue");
+const Chat = require("../models/Chat");
+const { getIO } = require("../sockets/socketInstance");
+const mongoose = require("mongoose");
 
-const { encryptMessage } = require("../utils/encryption");
-
-// exports.sendTextMessage = async (req, res) => {
-//   try {
-
-//     const { chatId, text } = req.body;
-
-//     await messageQueue.add("newMessage", {
-//   chatId,
-//   sender: req.userId,
-//   text: encryptMessage(text)
-// });
-
-//     res.json({
-//       message: "Message queued successfully"
-//     });
-
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-exports.getMessages = async (req, res) => {
+// 1. Send Text Message
+exports.sendMessage = async (req, res) => {
   try {
+    const senderId = req.userId || req.user?._id;
+    const { chatId, text } = req.body;
 
-    const { chatId } = req.params;
+    if (!chatId || !text || !text.trim()) {
+      return res.status(400).json({ message: "chatId and text are required" });
+    }
 
-    const messages = await Message.find({ chatId })
-      .populate("sender", "username profilePic")
-      .sort({ createdAt: 1 });
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: "Invalid chatId format" });
+    }
 
-    res.status(200).json(messages);
+    // Schema ke fields: chatId, sender, text
+    const newMessage = await Message.create({
+      chatId: chatId,
+      sender: senderId,
+      text: text.trim(),
+      status: "sent",
+    });
 
+    // Chat ka lastMessage update karein
+    await Chat.findByIdAndUpdate(chatId, { lastMessage: newMessage._id });
+
+    // Populate sender details (name, username, avatar)
+    const fullMessage = await Message.findById(newMessage._id).populate(
+      "sender",
+      "name username avatar profilePic"
+    );
+
+    // Realtime Socket delivery to chat room
+    try {
+      const io = getIO() || req.app.get("io");
+      if (io) {
+        io.to(chatId.toString()).emit("receiveMessage", fullMessage);
+      }
+    } catch (socketErr) {
+      console.warn("Socket broadcast warning:", socketErr.message);
+    }
+
+    return res.status(201).json(fullMessage);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in sendMessage:", error);
+    return res.status(500).json({
+      message: "Failed to send message",
+      error: error.message,
+    });
   }
 };
 
-exports.sendMediaMessage = async (req,res)=>{
-  try{
+// 2. Get All Messages for a Chat
+exports.getMessages = async (req, res) => {
+  try {
+    const { chatId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ message: "Invalid chatId" });
+    }
+
+    const messages = await Message.find({ chatId })
+      .populate("sender", "name username avatar profilePic")
+      .sort({ createdAt: 1 });
+
+    return res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error in getMessages:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 3. Send Media Message
+exports.sendMediaMessage = async (req, res) => {
+  try {
+    const senderId = req.userId || req.user?._id;
     const { chatId } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
     const message = await Message.create({
       chatId,
-      sender: req.userId,
-      media: req.file.path
+      sender: senderId,
+      mediaUrl: req.file.path,
     });
 
-    res.json(message)
+    await Chat.findByIdAndUpdate(chatId, { lastMessage: message._id });
 
-  }catch(err){
-    res.status(500).json({message:err.message})
-  }
-}
+    const fullMessage = await Message.findById(message._id).populate(
+      "sender",
+      "name username avatar profilePic"
+    );
 
-exports.sendTextMessage = async (req, res) => {
-  try {
-    const { chatId, text } = req.body;
-
-    console.log("========== SEND MESSAGE ==========");
-    console.log("chatId:", chatId);
-    console.log("text:", text);
-    console.log("userId:", req.userId);
-
-    if (!chatId) {
-      return res.status(400).json({
-        message: "chatId is required",
-      });
+    const io = getIO() || req.app.get("io");
+    if (io) {
+      io.to(chatId.toString()).emit("receiveMessage", fullMessage);
     }
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({
-        message: "Message text is required",
-      });
-    }
-
-    const encryptedText = encryptMessage(text);
-
-    console.log("Encryption successful");
-
-    const job = await messageQueue.add("newMessage", {
-      chatId,
-      sender: req.userId,
-      text: encryptedText,
-    });
-
-    console.log("JOB CREATED:", job.id);
-    console.log("================================");
-
-    res.status(200).json({
-      message: "Message queued successfully",
-      jobId: job.id,
-    });
-
-  } catch (error) {
-    console.error("========== SEND MESSAGE ERROR ==========");
-    console.error(error);
-    console.error("========================================");
-
-    res.status(500).json({
-      message: error.message,
-    });
+    return res.status(201).json(fullMessage);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };

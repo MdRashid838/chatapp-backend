@@ -3,6 +3,69 @@ const Message = require("../models/Message");
 
 // backend/src/controllers/chatController.js
 const User = require("../models/User");
+const mongoose = require("mongoose");
+
+// 1. Access or Create One-on-One Chat
+exports.accessOrCreateChat = async (req, res) => {
+  try {
+    const currentUserId = req.userId || req.user?._id;
+    const { userId: targetUserId } = req.body;
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "userId parameter missing" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(targetUserId) || !mongoose.Types.ObjectId.isValid(currentUserId)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    // Schema ke mutabiq 'participants' use karein
+    let isChat = await Chat.findOne({
+      isGroup: false,
+      participants: { $all: [currentUserId, targetUserId] },
+    })
+      .populate("participants", "-password")
+      .populate("lastMessage");
+
+    if (isChat) {
+      return res.status(200).json(isChat);
+    }
+
+    // Nayi Chat create karein
+    const newChat = await Chat.create({
+      participants: [currentUserId, targetUserId],
+      isGroup: false,
+    });
+
+    const fullChat = await Chat.findById(newChat._id)
+      .populate("participants", "-password")
+      .populate("lastMessage");
+
+    return res.status(201).json(fullChat);
+  } catch (error) {
+    console.error("Access chat error:", error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+// 2. User ke saare chats Sidebar ke liye
+exports.getUserChats = async (req, res) => {
+  try {
+    const currentUserId = req.userId || req.user?._id;
+
+    const chats = await Chat.find({
+      participants: { $in: [currentUserId] },
+    })
+      .populate("participants", "-password")
+      .populate("lastMessage")
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json(chats);
+  } catch (error) {
+    console.error("Get user chats error:", error);
+    return res.status(500).json({ message: "Failed to fetch chats", error: error.message });
+  }
+};
 
 exports.getChatUsers = async (req, res) => {
   try {

@@ -1,23 +1,26 @@
 const express = require("express");
 const router = express.Router();
 
-const { getMessages, sendMediaMessage, sendTextMessage } = require("../controllers/messageController");
+const {
+  sendMessage,
+  getMessages,
+  sendMediaMessage,
+} = require("../controllers/messageController");
 const authMiddleware = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
+// 1. Get messages of a chat
 router.get("/:chatId", authMiddleware, getMessages);
 
+// 2. Send text message (Use sendMessage here)
+router.post("/", authMiddleware, sendMessage);
 
-console.log("authMiddleware:", typeof authMiddleware);
-console.log("upload:", typeof upload);
-console.log("upload.single:", typeof upload.single);
-console.log("sendMediaMessage:", typeof sendMediaMessage);
+// 3. Send media message
 router.post(
- "/media",
- authMiddleware,
- upload.single("file"),
- sendMediaMessage
-)
-router.post("/", authMiddleware, sendTextMessage);
+  "/media",
+  authMiddleware,
+  upload.single("file"),
+  sendMediaMessage
+);
 
 module.exports = router;
