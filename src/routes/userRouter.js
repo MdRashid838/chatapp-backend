@@ -5,13 +5,17 @@ const router = express.Router();
 const auth = require("../middleware/authMiddleware");
 
 // Controllers
+
 const {
   getOwnProfile,
   getUserProfile,
   followUser,
   unfollowUser,
   searchUsers,
+  getFollowers,
+  getFollowing,
 } = require("../controllers/userController");
+
 
 // 1. Logged-in user ki profile (PEHLE aayega)
 router.get("/profile", auth, getOwnProfile);
@@ -23,5 +27,10 @@ router.get("/profile/:id", auth, getUserProfile);
 router.post("/follow/:id", auth, followUser);
 router.post("/unfollow/:id", auth, unfollowUser);
 router.get("/search", auth, searchUsers);
+
+
+router.get("/:id/followers", auth, getFollowers);
+router.get("/:id/following", auth, getFollowing);
+
 
 module.exports = router;

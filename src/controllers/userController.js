@@ -280,3 +280,41 @@ exports.searchUsers = async (req, res) => {
     res.status(500).json({ message: "Server error during search" });
   }
 };
+
+
+
+/* Followers ki list fetch karne ke liye */
+exports.getFollowers = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate("followers", "name username avatar");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      users: user.followers,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* Following ki list fetch karne ke liye */
+exports.getFollowing = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .populate("following", "name username avatar");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      users: user.following,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
